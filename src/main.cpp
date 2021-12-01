@@ -7,8 +7,10 @@
 #include "io/Keyboard.h"
 #include "io/Camera.h"
 #include "io/Mouse.h"
-#include "graphics/Texture.h"
-#include "graphics/models/Cube.h"
+#include "graphics/Light.h"
+#include "graphics/models/Lamp.h"
+#include "graphics/models/ModelInspector.h"
+#include "graphics/models/LampSphere.h"
 
 static Camera mainCamera(glm::vec3(0.0f, 0.0f, 5.0f));
 
@@ -66,8 +68,9 @@ int main()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-//    auto mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-    GLFWwindow* window = glfwCreateWindow(800, 600, "OpenGL", nullptr, nullptr);
+    auto monitor = glfwGetPrimaryMonitor();
+    auto mode = glfwGetVideoMode(monitor);
+    GLFWwindow* window = glfwCreateWindow(mode->width, mode->height, "OpenGL", monitor, nullptr);
     if (!window)
     {
         std::cout << "Unable to create glfw window" << std::endl;
@@ -94,8 +97,10 @@ int main()
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
     glEnable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    glViewport(0, 0, 800, 600);
+    glViewport(0, 0, mode->width, mode->height);
 
 //    float vertices[] =
 //            {
@@ -185,11 +190,34 @@ int main()
 //            };
 
     Shader shader("/home/aeternum/CLionProjects/OpenGLApi/assets/shaders/Basic.shader.glsl");
+    Shader lampShader("/home/aeternum/CLionProjects/OpenGLApi/assets/shaders/Lamp.shader.glsl");
 
-    Cube cube(glm::vec3(0.0f), glm::vec3(1.0f));
-    cube.Init();
+    LampSphereArray lamps;
+    auto& defaultValues = lamps.GetModel().GetPointLight();
+    auto& ambient = defaultValues.GetAmbient();
+    auto& diffuse = defaultValues.GetDiffuse();
+    auto& specular = defaultValues.GetSpecular();
 
-    float lastFrame = 0.0f, deltaTime = 0.0f;
+    glm::vec3 lightPos[] =
+            {
+                    glm::vec3(-5.0f, 1.0f, -1.0f),
+                    glm::vec3(0.0f, -5.0f, 0.0f),
+                    glm::vec3(5.0f, 1.0f, 0.0f),
+                    glm::vec3(0.0f, 1.0f, -5.0f),
+                    glm::vec3(0.0f, 1.0f, 5.0f)
+            };
+
+    for (unsigned int i = 0; i < 5; i++)
+        lamps.PushLightInstance(PointLight("multiPointLight[" + std::to_string(i) + "]" , lightPos[i], ambient, diffuse, specular));
+
+    DirLight dirLight("dirLight", glm::vec3(-0.2f, -1.0f, -0.3f),
+                      glm::vec4(glm::vec3(0.1f), 1.0f),
+                      glm::vec4(glm::vec3(0.4f), 1.0f),
+                      glm::vec4(glm::vec3(0.75f), 1.0f));
+
+    ModelInspector model;
+
+    float lastFrame = 0.0f, deltaTime;
     while(!glfwWindowShouldClose(window))
     {
         auto currentTime = (float)glfwGetTime();
@@ -201,23 +229,34 @@ int main()
         glClearColor(0.090f, 0.090f, 0.090f, 1.0f);
 
         shader.Activate();
+        shader.Set3Float("viewPos", mainCamera.GetCameraPos());
+        shader.SetFloat("material.shininess", 0.5f);
 
         glm::mat4 view = glm::mat4(1.0f);
         glm::mat4 projection = glm::mat4(1.0f);
 
         view = mainCamera.GetViewMatrix();
-        projection = glm::perspective(glm::radians(mainCamera.GetZoom()), (float)800/600, 1.0f, 100.0f);
+        projection = glm::perspective(glm::radians(mainCamera.GetZoom()), ((float)mode->width/(float)mode->height), 1.0f, 100.0f);
 
         shader.SetMat4("view", view);
         shader.SetMat4("projection", projection);
 
-        cube.Render(shader);
+        model.Render(shader, deltaTime);
+
+        dirLight.Render(shader);
+        lamps.RenderLights(shader);
+
+        lampShader.Activate();
+        lampShader.SetMat4("view", view);
+        lampShader.SetMat4("projection", projection);
+        lamps.Render(lampShader, deltaTime);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
-    cube.CleanUp();
+    model.CleanUp();
+    lamps.CleanUp();
     glfwTerminate();
 
     return 0;

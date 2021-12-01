@@ -88,3 +88,8 @@ float Camera::GetZoom() const
 {
     return m_Zoom;
 }
+
+glm::vec3 Camera::GetCameraPos()
+{
+    return m_CameraPos;
+}

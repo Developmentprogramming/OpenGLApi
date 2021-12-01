@@ -9,12 +9,12 @@
 
 unsigned int Texture::m_CurrentId = 0;
 
-Texture::Texture(const std::string &path, const std::string& name)
+Texture::Texture(const std::string &path, const std::string& name, bool flip)
     : m_FilePath(path), m_TextureName(name),
     m_Width(0), m_Height(0), m_NChannels(0), m_Id(0), m_UId(m_CurrentId++),
     m_Buffer(nullptr)
 {
-    stbi_set_flip_vertically_on_load(true);
+    stbi_set_flip_vertically_on_load(flip);
     m_Buffer = stbi_load(path.c_str(), &m_Width, &m_Height, &m_NChannels, 0);
 
     glGenTextures(1, &m_Id);
@@ -45,8 +45,16 @@ Texture::Texture(const std::string &path, const std::string& name)
         glTexImage2D(GL_TEXTURE_2D, 0, colorMode, m_Width, m_Height, 0, colorMode, GL_UNSIGNED_BYTE, m_Buffer);
         stbi_image_free(m_Buffer);
     }
+    else
+        std::cout << "Unable to load texture(" << path << ")" << std::endl;
 
     glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+Texture::Texture(const std::string &path, const std::string &name, aiTextureType type, bool flip)
+    : Texture(path, name, flip)
+{
+    m_Type = type;
 }
 
 void Texture::Bind(unsigned int slot) const
@@ -60,9 +68,19 @@ void Texture::Unbind() const
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
+void Texture::SetTextureName(const std::string &name)
+{
+    m_TextureName = name;
+}
+
 std::string& Texture::GetTextureName()
 {
     return m_TextureName;
+}
+
+std::string &Texture::GetPath()
+{
+    return m_FilePath;
 }
 
 unsigned int& Texture::GetId()
@@ -73,4 +91,9 @@ unsigned int& Texture::GetId()
 void Texture::CleanUp()
 {
     glDeleteTextures(1, &m_Id);
+}
+
+aiTextureType Texture::GetType()
+{
+    return m_Type;
 }

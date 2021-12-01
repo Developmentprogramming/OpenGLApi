@@ -5,7 +5,6 @@
 #include "Shader.h"
 
 #include <fstream>
-#include <sstream>
 #include <iostream>
 #include <filesystem>
 #include <algorithm>
@@ -84,12 +83,7 @@ Shader::Sources Shader::ParseShader(const std::string& path)
 unsigned int Shader::CreateShader(GLenum type, const std::string& source)
 {
     unsigned int shader = glCreateShader(type);
-//    std::vector<GLchar*> src;
-//    src.push_back((GLchar*)(source.c_str()));
-
-//    for (auto& required_src : m_ShaderRequirements)
-//        src.push_back((GLchar*)required_src.c_str());
-    GLchar* src = (GLchar*)source.c_str();
+    auto src = source.c_str();
 
     glShaderSource(shader, 1, &src, nullptr);
     glCompileShader(shader);
@@ -126,9 +120,29 @@ void Shader::SetFloat(const std::string &name, float val)
     glUniform1f(glGetUniformLocation(m_Id, name.c_str()), val);
 }
 
+void Shader::Set3Float(const std::string &name, float v1, float v2, float v3)
+{
+    glUniform3f(glGetUniformLocation(m_Id, name.c_str()), v1, v2, v3);
+}
+
+void Shader::Set3Float(const std::string &name, glm::vec3 val)
+{
+    Set3Float(name, val.x, val.y, val.z);
+}
+
 void Shader::Set4Float(const std::string &name, float v1, float v2, float v3, float v4)
 {
     glUniform4f(glGetUniformLocation(m_Id, name.c_str()), v1, v2, v3, v4);
+}
+
+void Shader::Set4Float(const std::string &name, glm::vec4 val)
+{
+    Set4Float(name, val.x, val.y, val.z, val.w);
+}
+
+void Shader::Set4Float(const std::string &name, aiColor4D val)
+{
+    Set4Float(name, val.r, val.g, val.b, val.a);
 }
 
 void Shader::SetMat4(const std::string &name, glm::mat4 val)
@@ -164,9 +178,9 @@ std::string Shader::ParseShaderSrc(const std::string& shader_file)
             while (l >> word)
                 words.push_back(word);
 
-            if (Search(words, {"void", "main()"}))
+            if (Search(words, {"void", "main()"}) && line.find("// Start Main") != std::string::npos)
                 inMain = true;
-            else if (inMain && (line.find('}') != std::string::npos))
+            else if (inMain && (line.find('}') != std::string::npos) && line.find("// End Main") != std::string::npos)
             {
                 inMain = false;
                 continue;
@@ -178,6 +192,7 @@ std::string Shader::ParseShaderSrc(const std::string& shader_file)
                 Search(words, {"uniform"}) ||
                 Search(words, {"out"}) ||
                 Search(words, {"in"}) ||
+                line.find("//") != std::string::npos ||
                 inMain)
                 continue;
             else

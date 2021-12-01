@@ -10,6 +10,7 @@
 #include <glm/glm.hpp>
 #include <string>
 #include <vector>
+#include <assimp/color4.h>
 
 class Shader
 {
@@ -27,7 +28,11 @@ public:
     void SetBool(const std::string& name, bool val);
     void SetInt(const std::string& name, int val);
     void SetFloat(const std::string& name, float val);
+    void Set3Float(const std::string& name, float v1, float v2, float v3);
+    void Set3Float(const std::string& name, glm::vec3 val);
     void Set4Float(const std::string& name, float v1, float v2, float v3, float v4);
+    void Set4Float(const std::string& name, glm::vec4 val);
+    void Set4Float(const std::string& name, aiColor4D val);
     void SetMat4(const std::string& name, glm::mat4 val);
 
 protected:

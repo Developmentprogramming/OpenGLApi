@@ -9,6 +9,7 @@
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <vector>
+#include <assimp/scene.h>
 
 #include "Texture.h"
 #include "Shader.h"
@@ -16,6 +17,7 @@
 struct Vertex
 {
     glm::vec3 m_Pos;
+    glm::vec3 m_Normal;
     glm::vec2 m_TexCoord;
 
     static std::vector<Vertex> CreateVertices(float *vertices, int noVertices);
@@ -24,10 +26,10 @@ struct Vertex
 class Mesh
 {
 public:
-    Mesh();
     Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::vector<Texture> textures);
+    Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, aiColor4D diffColor, aiColor4D specColor);
 
-    void Render(Shader shader);
+    void Render(Shader shader, const std::string& uniform_material = "material");
     void CleanUp();
 
 protected:
@@ -35,8 +37,13 @@ protected:
     std::vector<unsigned int> m_Indices;
     std::vector<Texture> m_Textures;
 
+    aiColor4D m_DiffColor, m_SpecColor;
+    bool m_NoTex;
+
 private:
     unsigned int m_VAO, m_VBO, m_EBO;
+
+    Mesh(std::vector<Vertex> vertices, std::vector<unsigned int> indices, std::vector<Texture> textures, bool noTex, aiColor4D diffColor, aiColor4D specColor);
 };
 
 #endif //OPENGLAPI_MESH_H
